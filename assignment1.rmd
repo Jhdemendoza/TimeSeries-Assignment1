@@ -1,0 +1,79 @@
+---
+title: "Time Series Assignment 1"
+author: Alvaro Gonzalez Fernandez y Jaime Hurtado de Mendoza Sastre
+date: February 22, 2019
+output:
+  html_document:
+    theme: readable
+    highlight: default
+    toc: true
+    toc_depth: 2
+    number_sections: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: false
+---
+
+Loading libraries:
+```{r}
+library("e1071")
+```
+
+1. Data Analysis
+Problem 1.- The aim of this problem is to analyze the returns of the time series given by the FCHI daily returns.
+
+Firstly the data has to be loaded:
+```{r}
+fchi <- read.csv("^FCHI.csv", dec = ".")
+head(fchi)
+```
+
+From all the variables available in the dataset we only care about the daily returns which are computed as follows: $r_t = 100 \times (ln(p_t)-ln(p_{t-1}))$, where $p_t$ and $p_{t-1}$ represent the adjusted closing price at times $t$ and $t-1$ respectively, and the whole expression is multiplied by $100$ so that it is in percentage.
+Below, the implementation of a function as well as the call to it in order to obtain the daily returns are presented.
+
+```{r}
+adjClose <- function(prices) {
+  rt <- ts(numeric(length(prices)), frequency = 365, start = as.numeric(format(as.Date("1990-01-04"), "%j")))
+  for (i in 1:length(prices)) {
+    if (i == 1) {
+      rt[i] <- 0
+    }
+    else {
+      rt[i] <- 100*(log(prices[i])-log(prices[i-1]))
+    }
+  }
+  return(rt)
+}
+
+fchiRet <- adjClose(as.numeric(fchi$Adj.Close))
+```
+
+Once the returns have been computed it seems interesting to visualize the time series.
+
+```{r}
+help("tsdisplay")
+tsdisplay(fchiRet, lag.max = 30, main="Daily returns of FCHI")
+```
+
+In the plots above we can see the daily returns for the FCHI as well as the autocorrelogram and the partial autocorrelogram of these daily returns. The autocorrelogram shows high autocorrelation for observations up to 2 days before and abnormally high for observation 5. Either way, thanks to these graphs we can see that the data is stationary.
+
+Once the data has been loaded and visualize, now we will obtain the four main moments of a probability distribution which are its mean, variance, kurtosis and skewness.
+
+```{r}
+moments <- function(data) {
+  return(c(paste("Mean: ", mean(data)), paste("Standard deviation: ", sd(data)), paste("Kurtosis: ", kurtosis(data)), paste("Skewness: ", skewness(data))))
+}
+
+moments(fchiRet)
+```
+
+As expected, the mean of the returns is quite close to zero. The variance in this case is very high, which is not usual for the kind of data we are dealing with. Moreover the variance is quite high for what it could be expected for this kind of data as normally the variance for the daily returns is quite close to zero. The value of the skweness is negative and similar to what it could be expected when looking at daily returns. The sign of the skweness indicates that the left tale of the distribution is larger than the right tale. Finally, the Kurtosis, even though for this type of data normally is large, in this case we can observe an abnormally high value.
+
+
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
