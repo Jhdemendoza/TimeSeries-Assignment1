@@ -16,6 +16,8 @@ output:
 
 Loading libraries:
 ```{r}
+library("fpp")
+library("rugarch")
 library("e1071")
 ```
 
@@ -51,7 +53,6 @@ fchiRet <- adjClose(as.numeric(fchi$Adj.Close))
 Once the returns have been computed it seems interesting to visualize the time series.
 
 ```{r}
-help("tsdisplay")
 tsdisplay(fchiRet, lag.max = 30, main="Daily returns of FCHI")
 ```
 
@@ -69,11 +70,58 @@ moments(fchiRet)
 
 As expected, the mean of the returns is quite close to zero. The variance in this case is very high, which is not usual for the kind of data we are dealing with. Moreover the variance is quite high for what it could be expected for this kind of data as normally the variance for the daily returns is quite close to zero. The value of the skweness is negative and similar to what it could be expected when looking at daily returns. The sign of the skweness indicates that the left tale of the distribution is larger than the right tale. Finally, the Kurtosis, even though for this type of data normally is large, in this case we can observe an abnormally high value.
 
+2. Univariate GARCH models. 
+The aim is to fit a GARCH-type model to a financial time series returns, more specifically to the FCHI time series.
+
+a) Fit a GARCH(1,1) model with Gaussian errors to the daily returns and comment on the implied volatility persistance obtained with this model.
+
+Even though the mean is already very small is quite common to subtract it from the returns to model the volatility, therefore, we'll do so:
+
+```{r}
+fchiRet2 <- fchiRet - mean(fchiRet)
+moments(fchiRet2)
+```
+
+As it can be seen we've made the mean of the series zero.
+
+Now in order to fit the garch model, firstly the some parameters have to be specified, as it is done in the following section:
+
+```{r}
+fchiRetSpec <- ugarchspec(variance.model = list(garchOrder=c(1,1)), mean.model = list(armaOrder = c(0,0)))
+```
+
+Here we have specified that the variance will be modeled as a garch of order 1,1 and the mean as an arma model of order 0,0, which means that no model will be fit for the mean as it is constant.
+
+```{r}
+fchiRetFit <- ugarchfit(spec = fchiRetSpec, fchiRet2)
+fchiRetFit
+```
+
+From this fit we obtain that the volatility persistance is 0.982736, which is quite high, and means that there is not too much change in the volatility with time as it is almost the same as the one observed one step before.
+
+2. Is the model able to fit the characteristics of the data (mainly asymmetry)? Use a test tu justify your answer.
+
+Firstly we'll visualize again the time series and the results and plot of the model.
+
+```{r}
+tsdisplay(fchiRet2, lag.max = 30, main="FCHI returns")
+```
+
+It is imoportant to note that the dates shown in these plots are not the ones that are being used and is just a bad representation and interpretation from the labels in the plots.
+
+```{r}
+plot(fchiRetFit)
+```
 
 
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+From these plots specially those concerining the distribution of the errors, we can see that the time series is not symmetric as surprisingly, the positive returns have a higher effect than the negative ones. Graphically the best way to see this is probably by looking at the distribution of the errors which are positive or right skewed (unusual).
 
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+From the results of fitting the model, we can see the Engle and Ng test.
 
-The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+```{r}
+signbias(fchiRetFit)
+```
+
+Indeed, we can see that the sign bias is positive which makes sense to what we've seen on the residuals. Once again, it is important to remark that this is unusual in financial time series as normally the negative effects have higher impact than the positive ones.
+
 
