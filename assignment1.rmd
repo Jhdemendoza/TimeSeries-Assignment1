@@ -21,7 +21,7 @@ library("rugarch")
 library("e1071")
 ```
 
-1. Data Analysis
+# Data Analysis
 Problem 1.- The aim of this problem is to analyze the returns of the time series given by the FCHI daily returns.
 
 Firstly the data has to be loaded:
@@ -70,10 +70,10 @@ moments(fchiRet)
 
 As expected, the mean of the returns is quite close to zero. The variance in this case is very high, which is not usual for the kind of data we are dealing with. Moreover the variance is quite high for what it could be expected for this kind of data as normally the variance for the daily returns is quite close to zero. The value of the skweness is negative and similar to what it could be expected when looking at daily returns. The sign of the skweness indicates that the left tale of the distribution is larger than the right tale. Finally, the Kurtosis, even though for this type of data normally is large, in this case we can observe an abnormally high value.
 
-2. Univariate GARCH models. 
+# Univariate GARCH models. 
 The aim is to fit a GARCH-type model to a financial time series returns, more specifically to the FCHI time series.
 
-a) Fit a GARCH(1,1) model with Gaussian errors to the daily returns and comment on the implied volatility persistance obtained with this model.
+## Fit a GARCH(1,1) model with Gaussian errors to the daily returns and comment on the implied volatility persistance obtained with this model.
 
 Even though the mean is already very small is quite common to subtract it from the returns to model the volatility, therefore, we'll do so:
 
@@ -99,7 +99,7 @@ fchiRetFit
 
 From this fit we obtain that the volatility persistance is 0.982736, which is quite high, and means that there is not too much change in the volatility with time as it is almost the same as the one observed one step before.
 
-2. Is the model able to fit the characteristics of the data (mainly asymmetry)? Use a test tu justify your answer.
+## Is the model able to fit the characteristics of the data (mainly asymmetry)? Use a test tu justify your answer.
 
 Firstly we'll visualize again the time series and the results and plot of the model.
 
@@ -110,7 +110,7 @@ tsdisplay(fchiRet2, lag.max = 30, main="FCHI returns")
 It is imoportant to note that the dates shown in these plots are not the ones that are being used and is just a bad representation and interpretation from the labels in the plots.
 
 ```{r}
-plot(fchiRetFit)
+plot(fchiRetFit, which = "all")
 ```
 
 
@@ -124,4 +124,65 @@ signbias(fchiRetFit)
 
 Indeed, we can see that the sign bias is positive which makes sense to what we've seen on the residuals. Once again, it is important to remark that this is unusual in financial time series as normally the negative effects have higher impact than the positive ones.
 
+## According to the previous answer, fit a GARCH-type model to your data and compare its estimation results to those obtained with the GARCH(1,1).
 
+A GARCH-type model that provides a better fit than the GARCH(1,1) model would be one that is able to model the asymmetry. We could use either an EGARCH or GJR.
+
+We'll fit an GJR model to the time series with errors following an Normal distribution.
+
+```{r}
+fchiRetSpecAsym <- ugarchspec(variance.model = list(model = "gjrGARCH", garchOrder = c(1,1)), mean.model = list(armaOrder = c(0,0)), distribution.model = "norm")
+fchiRetFitAsym <- ugarchfit(spec = fchiRetSpecAsym, fchiRet2)
+fchiRetFitAsym
+```
+
+```{r}
+plot(fchiRetFitAsym, which = "all")
+```
+
+We can see from the NIC that this model captures better the positive asymmetriy commented before.
+
+Now we'll compare the unconditional mean and variances of both models, as well as their forecasts.
+
+GARCH(1,1)
+```{r}
+c(paste("Unconditional mean: ",uncmean(fchiRetFit)),paste("Unconditional variance: ", uncvariance(fchiRetFit)))
+```
+
+Threshold GARCH(1,1) - GJR
+```{r}
+c(paste("Unconditional mean: ",uncmean(fchiRetFitAsym)),paste("Unconditional variance: ", uncvariance(fchiRetFitAsym)))
+```
+
+We can see that the mean is almost zero for both models, but the mean is larger for the asymmetric model which makes sense.
+
+```{r}
+fcRet <- ugarchforecast(fchiRetFit)
+fcRet
+```
+
+```{r}
+fcRetAsym <- ugarchforecast(fchiRetFitAsym)
+fcRetAsym
+```
+
+As expected the later model predicts a largewr variance.
+
+## Plot the NIC of the chosen model and explain it.
+
+Even though the News Impact Curve has already been plotted for both models we'll plot it again to see how the GJR captures better the fact that the variance (volatility) of this time series changes more when there is a positive change than when there is a negative one.
+
+GARCH(1,1)
+```{r}
+nic <- newsimpact(fchiRetFit)
+plot(nic$zx, nic$zy, type="l", col="blue")
+```
+
+
+GJR
+```{r}
+nicAsym <- newsimpact(fchiRetFitAsym)
+plot(nicAsym$zx, nicAsym$zy, type="l", col="blue")
+```
+
+As it has been seen before, the volatility changes more when there are positive changes than when there are negative changes in the time series. This is captured quite well by the GJR model as it can be seen on the previous graph. 
